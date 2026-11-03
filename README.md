@@ -100,3 +100,4 @@ touched. It generates the cluster `.env` itself (fingerprint injection)
 - `agent/` — merged per-cluster backup agent image.
 - `test/cluster/` — reference client cluster (demo + agent, fixture `.env`).
 - `test/kopia.robot` — snapshot + restore end-to-end proof.
+# docker-backup
