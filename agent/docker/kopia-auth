@@ -1,0 +1,6 @@
+#!/bin/sh
+# Authenticated kopia for `exec` sessions: the user password lives in the
+# entrypoint's environment, which exec sessions don't inherit.
+set -eu
+export KOPIA_PASSWORD="$(cat /etc/backup-agent/repo-password)"
+exec kopia "$@"

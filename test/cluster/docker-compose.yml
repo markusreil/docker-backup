@@ -1,0 +1,45 @@
+name: ${PROJECT_NAME:?...}
+
+services:
+  agent:
+    build:
+      context: ../../agent
+      args:
+        KOPIA_VERSION: ${KOPIA_VERSION:?...}
+        DOCKER_GEN_VERSION: ${DOCKER_GEN_VERSION:?...}
+        YQ_VERSION: ${YQ_VERSION:?...}
+        BUILD_DATE: ${BUILD_DATE:-unknown}
+    image: ${PROJECT_NAME:?}-agent:${KOPIA_VERSION:?}
+    hostname: ${KOPIA_CLIENT_HOST:?...}
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:rw
+      - agent-state:/state
+      - demo-vol:/mnt/test-cluster_demo-vol:ro
+    environment:
+      DOCKER_HOST: unix:///tmp/docker.sock
+      KOPIA_SERVER_URL: ${KOPIA_SERVER_URL:?...}
+      KOPIA_SERVER_FINGERPRINT: ${KOPIA_SERVER_FINGERPRINT:?KOPIA_SERVER_FINGERPRINT not set}
+      KOPIA_CLIENT_PASSWORD: ${KOPIA_CLIENT_PASSWORD:?KOPIA_CLIENT_PASSWORD not set}
+      AGENT_INTERVAL: ${AGENT_INTERVAL:-300}
+    networks:
+      kopia-backup:
+
+  demo:
+    image: alpine:3.24.2
+    restart: unless-stopped
+    command: ["sh", "-c", "echo hello-kopia > /data/sentinel-seed.txt && while true; do sleep 3600; done"]
+    volumes:
+      - demo-vol:/data
+    labels:
+      backup.data.enabled: "true"
+      backup.data.schedule: "@daily"
+
+volumes:
+  agent-state:
+  demo-vol:
+
+networks:
+  kopia-backup:
+    name: kopia-backup
+    external: true

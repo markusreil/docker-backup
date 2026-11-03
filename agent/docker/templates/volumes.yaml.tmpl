@@ -1,0 +1,24 @@
+{{- /* Backend-agnostic list of volumes to back up. */ -}}
+{{- /* Opt-in label:  backup.<id>.enabled=true                        */ -}}
+{{- /* Optional:      backup.<id>.schedule=<cron-ish, default @daily>  */ -}}
+{{- /* <id> matches a mount by full volume name, full destination path */ -}}
+{{- /* ("/<id>"), or basename of the destination (e.g. id "data"      */ -}}
+{{- /* matches Destination "/data"). Compose project prefixes are      */ -}}
+{{- /* resolved automatically: we emit the runtime Mount.Name.         */ -}}
+{{- $vols := list -}}
+{{- $seen := dict -}}
+{{- range $c := . -}}
+{{- range $key, $val := $c.Labels -}}
+{{- if and (hasPrefix "backup." $key) (hasSuffix ".enabled" $key) (eq $val "true") -}}
+{{- $id := trimSuffix ".enabled" (trimPrefix "backup." $key) -}}
+{{- $schedule := index $c.Labels (print "backup." $id ".schedule") | default "@daily" -}}
+{{- range $m := $c.Mounts -}}
+{{- if and $m.Name (not (hasKey $seen $m.Name)) (or (eq $m.Name $id) (eq $m.Destination (print "/" $id)) (eq (base $m.Destination) $id)) -}}
+{{- $_ := set $seen $m.Name true -}}
+{{- $vols = append $vols (dict "container" $c.Name "volume" $m.Name "destination" $m.Destination "schedule" $schedule) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{ dict "version" 1 "volumes" $vols | toYaml }}

@@ -1,0 +1,21 @@
+# NFS overlay for the kopia server cluster: keeps the kopia repository on
+# an NFS share instead of a local docker volume.
+#
+# Enable per deployment via COMPOSE_FILE in `.env` (see env.example) —
+# never rely on remembering `-f` flags:
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.nfs.yml
+# Explicit `-f` flags still override it.
+#
+# Only the volume definition is overridden here; the service, its mounts,
+# and the entrypoint (first-boot init, fingerprint at
+# /repo/certs/fingerprint) are unchanged, so moving between local and NFS
+# storage is a one-variable change. NFS_* vars are guarded with `:?...`,
+# so loading this file without them fails fast; the base file still
+# validates on its own.
+
+volumes:
+  kopia-repo:
+    driver_opts:
+      type: nfs
+      o: addr=${NFS_ADDR:?NFS_ADDR not set},${NFS_OPTS:-rw,nfsvers=4}
+      device: :${NFS_PATH:?NFS_PATH not set}

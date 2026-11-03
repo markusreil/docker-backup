@@ -1,0 +1,51 @@
+name: ${PROJECT_NAME:?...}
+
+x-hosts:
+  server: &host-server kopia.${BASE_DOMAIN:?BASE_DOMAIN not set}
+
+services:
+  server:
+    build:
+      context: ./kopia
+      args:
+        KOPIA_VERSION: ${KOPIA_VERSION:?...}
+        BUILD_DATE: ${BUILD_DATE:-unknown}
+    image: ${PROJECT_NAME:?}-server:${KOPIA_VERSION:?}
+    hostname: kopia.${BASE_DOMAIN:?BASE_DOMAIN not set}
+    restart: unless-stopped
+    entrypoint: ["/app/entrypoint.sh"]
+    expose:
+      - "51515"
+    volumes:
+      - kopia-repo:/repo
+    environment:
+      KOPIA_REPOSITORY_PASSWORD: ${KOPIA_REPOSITORY_PASSWORD:?KOPIA_REPOSITORY_PASSWORD not set}
+      KOPIA_SERVER_USER: ${KOPIA_SERVER_USER:?...}
+      KOPIA_SERVER_PASSWORD: ${KOPIA_SERVER_PASSWORD:?KOPIA_SERVER_PASSWORD not set}
+      KOPIA_CLIENT_USER: ${KOPIA_CLIENT_USER:?...}
+      KOPIA_CLIENT_HOST: ${KOPIA_CLIENT_HOST:?...}
+      KOPIA_CLIENT_PASSWORD: ${KOPIA_CLIENT_PASSWORD:?KOPIA_CLIENT_PASSWORD not set}
+      # Downstream proxy contract: UI through nginx-proxy, variant-agnostic.
+      VIRTUAL_HOST: *host-server
+      VIRTUAL_PROTO: https
+      ACME_HOST: *host-server
+      GEN_SELF_SIGNED_CERT: ${KOPIA_GEN_SELF_SIGNED_CERT:-false}
+    labels:
+      homepage.group: Backup
+      homepage.name: Kopia
+      homepage.icon: kopia
+      homepage.href: https://kopia.${BASE_DOMAIN:?BASE_DOMAIN not set}
+      homepage.description: Central backup server with one-click restore.
+    networks:
+      kopia-backup:
+      web-proxy:
+
+volumes:
+  kopia-repo:
+
+networks:
+  kopia-backup:
+    name: kopia-backup
+  web-proxy:
+    name: ${NGINX_PROXY_NETWORK:-web-proxy}
+    external: true
