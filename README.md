@@ -16,7 +16,8 @@ file and snapshots them to the server on a schedule.
    kopia. Watches the local daemon's container start/stop events, renders
    `/state/volumes.yaml` — the backend-agnostic list of volumes to back
    up — and snapshots each listed volume from its explicit read-only
-   `/mnt/<volume>` mount every `AGENT_INTERVAL` seconds. Only containers
+   `/mnt/<volume>` mount whenever its `backup.<id>.schedule` cron
+   expression matches (default `@daily`). Only containers
    with `backup.<id>.enabled=true` labels appear.
 
 The agnostic list format is deliberately backend-neutral (a `version` plus
@@ -30,7 +31,8 @@ Per container, per volume:
 | Label | Meaning |
 | --- | --- |
 | `backup.<id>.enabled=true` | Back up this volume (only value that opts in) |
-| `backup.<id>.schedule=<expr>` | Passthrough to the agnostic file (default `@daily`); informational in v1 |
+| `backup.<id>.schedule=<expr>` | Cron expression (`@daily` default, `AGENT_SCHEDULE` overrides it) served by supercronic — no `@minutely`/`@midnight` |
+| `backup.<id>.keep-<unit>=<N>` | Retention for `latest/hourly/daily/weekly/monthly/annual` (count, or omit to inherit); applied as kopia policy before every snapshot |
 
 `<id>` matches a mount by full volume name, by full destination path
 (`/<id>` — so id `root/sub/dir` matches a mount at `/root/sub/dir`), or

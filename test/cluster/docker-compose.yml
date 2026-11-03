@@ -8,6 +8,8 @@ services:
         KOPIA_VERSION: ${KOPIA_VERSION:?...}
         DOCKER_GEN_VERSION: ${DOCKER_GEN_VERSION:?...}
         YQ_VERSION: ${YQ_VERSION:?...}
+        SUPERCRONIC_VERSION: ${SUPERCRONIC_VERSION:?...}
+        SUPERCRONIC_SHA1SUM: ${SUPERCRONIC_SHA1SUM:?...}
         BUILD_DATE: ${BUILD_DATE:-unknown}
     image: ${PROJECT_NAME:?}-agent:${KOPIA_VERSION:?}
     hostname: ${KOPIA_CLIENT_HOST:?...}
@@ -21,7 +23,6 @@ services:
       KOPIA_SERVER_URL: ${KOPIA_SERVER_URL:?...}
       KOPIA_SERVER_FINGERPRINT: ${KOPIA_SERVER_FINGERPRINT:?KOPIA_SERVER_FINGERPRINT not set}
       KOPIA_CLIENT_PASSWORD: ${KOPIA_CLIENT_PASSWORD:?KOPIA_CLIENT_PASSWORD not set}
-      AGENT_INTERVAL: ${AGENT_INTERVAL:-300}
     networks:
       kopia-backup:
 
@@ -33,7 +34,8 @@ services:
       - demo-vol:/data
     labels:
       backup.data.enabled: "true"
-      backup.data.schedule: "@daily"
+      backup.data.schedule: "*/10 * * * * * *"
+      backup.data.keep-daily: "7"
 
 volumes:
   agent-state:

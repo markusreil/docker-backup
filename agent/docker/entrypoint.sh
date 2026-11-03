@@ -1,8 +1,10 @@
 #!/bin/sh
 # Merged backup agent: connect to the central kopia server once, then run
-# docker-gen in the background (renders /state/volumes.yaml from the local
-# daemon's container labels) while the snapshot loop below backs up every
-# listed volume from its explicit /mnt/<volume> mount.
+# docker-gen (renders /state/volumes.yaml and /state/crontab from the local
+# daemon's container labels) and supercronic (snapshots each listed volume
+# from its explicit /mnt/<volume> mount on its cron schedule).
+# Scheduling, mounting checks, and snapshot runs live in crontab.tmpl and
+# snapshot-volume; this script only starts the two services.
 set -eu
 
 export KOPIA_PASSWORD="${KOPIA_CLIENT_PASSWORD:?KOPIA_CLIENT_PASSWORD not set}"
@@ -24,26 +26,15 @@ if [ ! -f "$CONFIG" ]; then
 fi
 
 docker-gen -config /etc/backup-agent/docker-gen.cfg &
-GEN_PID=$!
 
-STATE=/state/volumes.yaml
-INTERVAL=${AGENT_INTERVAL:-3600}
-echo "[agent] waiting for $STATE ..."
-while [ ! -f "$STATE" ]; do sleep 5; done
+echo "[agent] waiting for /state/crontab ..."
+while [ ! -f /state/crontab ]; do sleep 5; done
 
-while true; do
-  count=$(yq -r '.volumes // [] | length' "$STATE")
-  i=0
-  while [ "$i" -lt "$count" ]; do
-    vol=$(yq -r ".volumes[$i].volume" "$STATE")
-    if [ -d "/mnt/$vol" ]; then
-      kopia snapshot create "/mnt/$vol" >/dev/null \
-        && echo "[agent] snapshotted $vol" \
-        || echo "[agent] snapshot failed for $vol"
-    else
-      echo "[agent] skip $vol (not mounted at /mnt/$vol)"
-    fi
-    i=$((i + 1))
-  done
-  sleep "$INTERVAL"
-done
+# Fail fast on a bad label or template bug instead of idling with no snaps.
+supercronic -test /state/crontab
+mkdir -p /tmp/backup-agent
+touch /tmp/backup-agent/supercronic-ready
+# Become supercronic (PID 1): graceful SIGTERM handling for free, and
+# reload-crontab can always find it. A supercronic exit drops the container
+# so the restart policy brings both services back together.
+exec supercronic /state/crontab

@@ -1,0 +1,8 @@
+#!/bin/sh
+# docker-gen notifycmd for the crontab template: ask supercronic (PID 1,
+# see entrypoint.sh) to pick up the regenerated /state/crontab.
+# Exits quietly when supercronic is not up yet (first render races it).
+set -eu
+
+if [ ! -f /tmp/backup-agent/supercronic-ready ]; then exit 0; fi
+kill -USR2 1

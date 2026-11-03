@@ -28,6 +28,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tracked `server/env.test` fixture: the robot suite spins up the server
   cluster from it (local volume, isolated `kopia-server-test` project),
   so a deployment `server/.env` (e.g. NFS) never affects tests.
+- Cron-based agent scheduling via supercronic: docker-gen renders
+  `/state/crontab` (one `snapshot-volume --volume <name>` line per
+  labeled volume, `backup.<id>.schedule` or `AGENT_SCHEDULE` default
+  `@daily`), supercronic serves it with reload-on-change and no
+  overlapping runs, replacing the fixed-interval loop.
+- Per-volume kopia retention: `backup.<id>.keep-<unit>` labels
+  (`latest/hourly/daily/weekly/monthly/annual`) become `--keep-*`
+  flags on the crontab line; `snapshot-volume` applies them as policy
+  before every snapshot, defaulting absent knobs to `inherit`.
 
 ### Fixed
 
@@ -44,3 +53,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   re-added without touching label collection.
 - Moved the demo fixture out of the compose file; tests spin up their own
   labeled fixture container in the suite setup and tear it down afterwards.
+- `AGENT_INTERVAL` fixed-interval agent loop, replaced by cron scheduling.

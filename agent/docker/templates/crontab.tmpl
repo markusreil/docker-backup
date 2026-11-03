@@ -1,0 +1,28 @@
+{{- /* One supercronic line per volume to back up. */ -}}
+{{- /* Schedule per backup.<id>.schedule label, else AGENT_SCHEDULE env, */ -}}
+{{- /* else @daily (supercronic has no @minutely/@midnight). */ -}}
+{{- /* <id> matching mirrors volumes.yaml.tmpl so both files agree. */ -}}
+{{- /* Retention: backup.<id>.keep-<unit> per volume, or inherit so label */ -}}
+{{- /* removal resets the knob instead of leaving a stale value. */ -}}
+{{- $default := .Env.AGENT_SCHEDULE | default "@daily" -}}
+{{- $units := list "latest" "hourly" "daily" "weekly" "monthly" "annual" -}}
+{{- $seen := dict -}}
+{{- range $c := . -}}
+{{- range $key, $val := $c.Labels -}}
+{{- if and (hasPrefix "backup." $key) (hasSuffix ".enabled" $key) (eq $val "true") -}}
+{{- $id := trimSuffix ".enabled" (trimPrefix "backup." $key) -}}
+{{- $schedule := index $c.Labels (print "backup." $id ".schedule") | default $default -}}
+{{- $flags := list -}}
+{{- range $u := $units -}}
+{{- $v := index $c.Labels (print "backup." $id ".keep-" $u) | default "inherit" -}}
+{{- $flags = append $flags (print "--keep-" $u "=" $v) -}}
+{{- end -}}
+{{- range $m := $c.Mounts -}}
+{{- if and $m.Name (not (hasKey $seen $m.Name)) (or (eq $m.Name $id) (eq $m.Destination (print "/" $id)) (eq (base $m.Destination) $id)) -}}
+{{- $_ := set $seen $m.Name true -}}
+{{ $schedule }} /etc/backup-agent/snapshot-volume --volume {{ $m.Name }}{{ range $flags }} {{ . }}{{ end }}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}

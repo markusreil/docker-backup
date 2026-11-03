@@ -21,6 +21,7 @@ Labeled Volume Is Snapshotted To Server
     ...                snapshots it; the snapshot is listed at the agent.
     Wait Until Keyword Succeeds    ${TIMEOUT}    ${RETRY}
     ...    Snapshot Should Exist    ${MNT}
+    Volume Policy Should Keep Daily    ${MNT}    7
 
 Snapshot Restores Byte-Identical Content
     [Documentation]    Restoring the latest snapshot reproduces the sentinel.
@@ -83,6 +84,14 @@ Snapshot Should Exist
     [Arguments]    ${path}
     ${listing}=    Kopia    snapshot    list    ${path}
     Should Contain    ${listing}    ${path}
+
+Volume Policy Should Keep Daily
+    [Documentation]    The keep-daily label is applied as kopia policy
+    ...                before the snapshot, not left to inherit.
+    [Arguments]    ${path}    ${expected}
+    ${policy}=    Kopia    policy    show    ${path}
+    Should Match Regexp    ${policy}
+    ...    Daily snapshots:\\s+${expected}\\s+\\(defined for this target\\)
 
 Restore Should Contain
     [Arguments]    ${source}    ${dir}    ${file}    ${expected}
